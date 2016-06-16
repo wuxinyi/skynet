@@ -108,13 +108,14 @@ main(int argc, char *argv[]) {
 	}
 
 	luaS_initshr();
-	skynet_globalinit();
-	skynet_env_init();
+	skynet_globalinit();  //初始化GNODE
+	skynet_env_init();    //初始化全局LuaState
 
-	sigign();
+	sigign();  //信号量相关
 
 	struct skynet_config config;
 
+  //这一段将config加载进全局 luastate
 	struct lua_State *L = luaL_newstate();
 	luaL_openlibs(L);	// link lua lib
 
@@ -129,7 +130,7 @@ main(int argc, char *argv[]) {
 		return 1;
 	}
 	_init_env(L);
-
+  //
 	config.thread =  optint("thread",8);
 	config.module_path = optstring("cpath","./cservice/?.so");
 	config.harbor = optint("harbor", 1);

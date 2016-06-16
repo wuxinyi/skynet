@@ -54,6 +54,7 @@ sp_wait(int efd, struct event *e, int max) {
 	struct epoll_event ev[max];
 	int n = epoll_wait(efd , ev, max, -1);
 	int i;
+  //进行一轮监听之后，设置用户态属性
 	for (i=0;i<n;i++) {
 		e[i].s = ev[i].data.ptr;
 		unsigned flag = ev[i].events;

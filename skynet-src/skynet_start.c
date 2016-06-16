@@ -107,7 +107,7 @@ thread_timer(void *p) {
 	for (;;) {
 		skynet_updatetime();
 		CHECK_ABORT
-		wakeup(m,m->count-1);
+		wakeup(m,m->count-1);   //慢慢将一个个工作线程唤醒
 		usleep(2500);
 	}
 	// wakeup socket thread
@@ -161,7 +161,7 @@ start(int thread) {
 	m->m = skynet_malloc(thread * sizeof(struct skynet_monitor *));
 	int i;
 	for (i=0;i<thread;i++) {
-		m->m[i] = skynet_monitor_new();
+		m->m[i] = skynet_monitor_new(); //每一个worker线程一个监视器？
 	}
 	if (pthread_mutex_init(&m->mutex, NULL)) {
 		fprintf(stderr, "Init mutex error");
@@ -172,7 +172,7 @@ start(int thread) {
 		exit(1);
 	}
 
-	create_thread(&pid[0], thread_monitor, m);
+	create_thread(&pid[0], thread_monitor, m); //monitor 
 	create_thread(&pid[1], thread_timer, m);
 	create_thread(&pid[2], thread_socket, m);
 
@@ -222,11 +222,11 @@ skynet_start(struct skynet_config * config) {
 		}
 	}
 	skynet_harbor_init(config->harbor);
-	skynet_handle_init(config->harbor);
-	skynet_mq_init();
-	skynet_module_init(config->module_path);
-	skynet_timer_init();
-	skynet_socket_init();
+	skynet_handle_init(config->harbor);  //初始化 contex 的 handle池 和 name池
+	skynet_mq_init(); //全局消息队列的初始化
+	skynet_module_init(config->module_path); // c 模块
+	skynet_timer_init();  //10毫秒级的精度
+	skynet_socket_init(); //socket连接池初始化
 
 	struct skynet_context *ctx = skynet_context_new(config->logservice, config->logger);
 	if (ctx == NULL) {
@@ -234,7 +234,7 @@ skynet_start(struct skynet_config * config) {
 		exit(1);
 	}
 
-	bootstrap(ctx, config->bootstrap);
+	bootstrap(ctx, config->bootstrap);  //启动bootstrap，主要是启动加载lua模块
 
 	start(config->thread);
 

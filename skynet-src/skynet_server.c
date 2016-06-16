@@ -292,6 +292,7 @@ skynet_context_message_dispatch(struct skynet_monitor *sm, struct message_queue 
 	int i,n=1;
 	struct skynet_message msg;
 
+  //正常情况下处理完一条消息就放回去了！
 	for (i=0;i<n;i++) {
 		if (skynet_mq_pop(q,&msg)) {
 			skynet_context_release(ctx);
@@ -457,7 +458,7 @@ cmd_kill(struct skynet_context * context, const char * param) {
 	}
 	return NULL;
 }
-
+//加载一个新的module，这里会创建一个新的snlua用于加载，同时创建自己的lua环境
 static const char *
 cmd_launch(struct skynet_context * context, const char * param) {
 	size_t sz = strlen(param);
@@ -760,7 +761,7 @@ skynet_globalinit(void) {
 	G_NODE.total = 0;
 	G_NODE.monitor_exit = 0;
 	G_NODE.init = 1;
-	if (pthread_key_create(&G_NODE.handle_key, NULL)) {
+	if (pthread_key_create(&G_NODE.handle_key, NULL)) {  //创建线程相关的变量
 		fprintf(stderr, "pthread_key_create failed");
 		exit(1);
 	}

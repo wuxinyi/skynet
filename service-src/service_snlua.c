@@ -101,7 +101,7 @@ init_cb(struct snlua *l, struct skynet_context *ctx, const char * args, size_t s
 	lua_pushcfunction(L, traceback);
 	assert(lua_gettop(L) == 1);
 
-	const char * loader = optstring(ctx, "lualoader", "./lualib/loader.lua");
+	const char * loader = optstring(ctx, "lualoader", "./lualib/loader.lua"); ///lualib/loader.lua
 
 	int r = luaL_loadfile(L,loader);
 	if (r != LUA_OK) {
@@ -136,7 +136,7 @@ launch_cb(struct skynet_context * context, void *ud, int type, int session, uint
 	assert(type == 0 && session == 0);
 	struct snlua *l = ud;
 	skynet_callback(context, NULL, NULL);
-	int err = init_cb(l, context, msg, sz);
+	int err = init_cb(l, context, msg, sz);  //第一个消息被发送到此处，交给init_cb进行处理
 	if (err) {
 		skynet_command(context, "EXIT", NULL);
 	}

@@ -285,7 +285,7 @@ socket_server_create() {
 		fprintf(stderr, "socket-server: create socket pair failed.\n");
 		return NULL;
 	}
-	if (sp_add(efd, fd[0], NULL)) {
+	if (sp_add(efd, fd[0], NULL)) {  //将管道读端加到epoll中
 		// add recvctrl_fd to event poll
 		fprintf(stderr, "socket-server: can't add server fd to event pool.\n");
 		close(fd[0]);
@@ -619,7 +619,7 @@ send_buffer(struct socket_server *ss, struct socket *s, struct socket_message *r
 			if (send_list(ss,s,&s->low,result) == SOCKET_CLOSE) {
 				return SOCKET_CLOSE;
 			}
-			// step 3
+			// step 3    
 			if (list_uncomplete(&s->low)) {
 				raise_uncomplete(s);
 			}
@@ -726,6 +726,7 @@ send_socket(struct socket_server *ss, struct request_send * request, struct sock
 				so.free_func(request->buffer);
 				return -1;
 			}
+      //如果一次发送没发送完的。将其提升到 high 队列
 			append_sendbuffer(ss, s, request, n);	// add to high priority list, even priority == PRIORITY_LOW
 		} else {
 			// udp
@@ -820,7 +821,7 @@ bind_socket(struct socket_server *ss, struct request_bind *request, struct socke
 		return SOCKET_ERROR;
 	}
 	sp_nonblocking(request->fd);
-	s->type = SOCKET_TYPE_BIND;
+	s->type = SOCKET_TYPE_BIND; //申请了一个socket，and注册了读事件
 	result->data = "binding";
 	return SOCKET_OPEN;
 }
@@ -837,8 +838,9 @@ start_socket(struct socket_server *ss, struct request_start *request, struct soc
 		result->data = "invalid socket";
 		return SOCKET_ERROR;
 	}
+  //SOCKET_TYPE_PACCEPT: accept 之后的客户端，尚未加入epoll队列； SOCKET_TYPE_PLISTEN，创建出来一个socket fd用于监听，但是尚未加入epoll队列
 	if (s->type == SOCKET_TYPE_PACCEPT || s->type == SOCKET_TYPE_PLISTEN) {
-		if (sp_add(ss->event_fd, s->fd, s)) {
+		if (sp_add(ss->event_fd, s->fd, s)) {  //accept listen 注册读 event，一个可以用于读数据，一个用于读accept
 			force_close(ss, s, result);
 			result->data = strerror(errno);
 			return SOCKET_ERROR;
@@ -1118,7 +1120,7 @@ report_connect(struct socket_server *ss, struct socket *s, struct socket_message
 		result->id = s->id;
 		result->ud = 0;
 		if (send_buffer_empty(s)) {
-			sp_write(ss->event_fd, s->fd, s, false);
+			sp_write(ss->event_fd, s->fd, s, false);  //为什么把写事件关了？
 		}
 		union sockaddr_all u;
 		socklen_t slen = sizeof(u);
@@ -1214,6 +1216,7 @@ socket_server_poll(struct socket_server *ss, struct socket_message * result, int
 				ss->checkctrl = 0;
 			}
 		}
+    //如果所有事件都处理完毕，则进行新一轮的epoll_wait
 		if (ss->event_index == ss->event_n) {
 			ss->event_n = sp_wait(ss->event_fd, ss->ev, MAX_EVENT);
 			ss->checkctrl = 1;
